@@ -1,150 +1,82 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html>
 <head>
-    <title>MIAGEGPT Interface</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="shortcut icon" href="path_to_your_favicon.ico">
+    <title>ChatGPT Interface</title>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
     <style>
-        :root {
-            --main-bg-color: #fff;
-            --main-font: Arial, sans-serif;
-            --main-color: #007BFF;
-            --hover-color: #0056b3;
-        }
-
         body {
-            font-family: var(--main-font);
-            margin: 0;
+            font-family: Arial, sans-serif;
+            background-color: #e5e5e5;
             padding: 0;
-            background-color: var(--main-bg-color);
+            margin: 0;
         }
-
         #chatbox {
-            width: 80%;
+            width: 600px;
             height: 70vh;
-            margin: 2em auto 1em auto;
-            padding: 1em;
-            border: 1px solid #ccc;
-            background-color: var(--main-bg-color);
+            margin: 50px auto;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
             overflow-y: auto;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
         }
-
-        #userinput, #inputform__submit {
-            padding: 0.5em;
-            border-radius: 5px;
+        #inputform {
+            width: 600px;
+            margin: 10px auto;
         }
-
         #userinput {
-            width: 75%;
-            border: 1px solid #ccc;
+            width: 100%;
+            box-sizing: border-box;
+            padding: 10px;
+            font-size: 16px;
+            border: 2px solid #ccc;
+            border-radius: 4px;
         }
-
-        #inputform__submit {
-            width: 20%;
-            border: none;
-            background-color: var(--main-color);
-            color: #fff;
-            cursor: pointer;
-            transition: background-color 0.3s ease;
-        }
-
-        #inputform__submit:hover {
-            background-color: var(--hover-color);
-        }
-
-        .user-message, .bot-message {
-            border-radius: 5px;
-            padding: 0.5em;
-            margin: 0.5em 0;
-            animation: animate 0.5s;
-        }
-
         .user-message {
-            background-color: var(--main-color);
-            color: #fff;
+            color: #000;
+            background-color: #e5e5e5;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+            align-self: flex-end;
+            order: 1;
         }
-
         .bot-message {
-            background-color: #ccc;
+            color: #fff;
+            background-color: #007BFF;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+            align-self: flex-start;
+            order: 2;
         }
-
-        @keyframes animate {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+        .user-message::before {
+            content: "Vous :";
+            font-weight: bold;
         }
-
-        /* Loader */
-        #loader {
-            display: none;
-            position: fixed;
-            left: 50%;
-            top: 50%;
-            transform: translate(-50%, -50%);
-            border: 16px solid #f3f3f3;
-            border-top: 16px solid var(--main-color);
-            border-radius: 50%;
-            width: 120px;
-            height: 120px;
-            animation: spin 2s linear infinite;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+        .bot-message::before {
+            content: "Bot :";
+            font-weight: bold;
         }
     </style>
 </head>
 <body>
-    <main>
-        <div id="chatbox" role="log" aria-live="polite">
-            <!-- Les messages du chat seront insérés ici -->
-        </div>
-
-        <form id="inputform">
-            <input type="text" id="userinput" autocomplete="off" aria-label="Type your message here">
-            <input type="submit" id="inputform__submit" value="Envoyer">
-        </form>
-    </main>
-
-    <div id="loader"></div>
-
+    <div id="chatbox"></div>
+    <form id="inputform">
+        <input type="text" id="userinput" autocomplete="off">
+    </form>
     <script>
-    $("#inputform").on("submit", function(e) {
-        e.preventDefault();
+        $("#inputform").on("submit", function(e) {
+            e.preventDefault();
 
-        var userInput = $("#userinput").val();
+            var userInput = $("#userinput").val();
+            $("#chatbox").append(`<p class="user-message">${userInput}</p>`);
+            $("#userinput").val("");
 
-        // Affichage du loader
-        $("#loader").css("display", "block");
-
-        $.ajax({
-            url: "/user-input",
-            type: "POST",
-            data: { user_input: userInput },
-            success: function(data) {
-                $("#chatbox").append(`<p class="user-message animate__animated animate__fadeIn">Vous : ${userInput}</p>`);
-                $("#userinput").val("");
-                $("#chatbox").append(`<p class="bot-message animate__animated animate__fadeIn">Bot : ${data.response}</p>`);
-                $("#chatbox").scrollTop($("#chatbox")[0].scrollHeight); // Fait défiler la zone de chat vers le bas lorsqu'un nouveau message est ajouté
-            },
-            error: function() {
-                alert("Une erreur est survenue lors de la demande.");
-            },
-            complete: function() {
-                // Cache le loader
-                $("#loader").css("display", "none");
-            }
+            $.post("/user-input", { user_input: userInput }, function(data) {
+                $("#chatbox").append(`<p class="bot-message">${data.response}</p>`);
+                $("#chatbox").scrollTop($("#chatbox")[0].scrollHeight);
+            });
         });
-    });
     </script>
 </body>
 </html>

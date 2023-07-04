@@ -10,7 +10,7 @@ import json
 app = Flask(__name__)
 
 # Set OpenAI key
-openai.api_key = os.getenv('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')
+openai.api_key = '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'
 
 # Connect to SQLite database
 conn = sqlite3.connect('chat_history.db')
@@ -25,13 +25,11 @@ conn.execute('''
 conn.commit()
 
 # Configurer le moteur OpenAI
-engine = "davinci-codex"  # Moteur GPT-3.5-turbo
+engine = "davinci-codex"
 
 # Configurer le synthétiseur vocal
 engine_speech = pyttsx3.init()
 
-# Remplacez YOUR_DALLE_API_KEY par votre clé d'API DALL-E
-DALLE_API_KEY = 'YOUR_DALLE_API_KEY'
 DALLE_API_URL = 'https://api.openai.com/v1/images/dalle'
 
 # Fonction pour appeler l'API OpenAI
@@ -39,10 +37,9 @@ def call_openai_api(prompt):
     response = openai.Completion.create(
         engine=engine,
         prompt=prompt,
-        max_tokens=50  # Limitez le nombre de tokens générés
+        max_tokens=50
     )
     return response.choices[0].text.strip()
-
 
 # Gestion des commandes spéciales
 def handle_special_commands(command):
@@ -57,35 +54,30 @@ def handle_special_commands(command):
         else:
             response = 'Veuillez fournir une requête pour générer une image.'
     elif command.startswith('/speech'):
-        # Réponse vocalisée
         response = "Commande speech : réponse vocalisée"
         speech_output(response)
     elif command.startswith('/stable-diffusion'):
-        # Utilisation des services de stable-diffusion
         response = "Commande stable-diffusion : utilisation des services de stable-diffusion"
     else:
         response = call_openai_api(command)
 
     return response
 
-
 # Fonction pour synthétiser la réponse en voix
 def speech_output(text):
     engine_speech.say(text)
     engine_speech.runAndWait()
 
-
 # Fonction pour générer une image avec DALL-E
 def generate_image_with_dalle(prompt):
     headers = {
-        'Authorization': f'Bearer {DALLE_API_KEY}',
+        'Authorization': f'Bearer {openai.api_key}',
         'Content-Type': 'application/json'
     }
 
     data = {
         'prompt': prompt,
         'num_images': 1
-        # Autres paramètres optionnels pour affiner les résultats avec DALL-E
     }
 
     response = requests.post(DALLE_API_URL, headers=headers, json=data)
@@ -95,7 +87,6 @@ def generate_image_with_dalle(prompt):
     else:
         return None
 
-
 # Route pour gérer les entrées de l'utilisateur
 @app.route('/user-input', methods=['POST','GET'])
 def handle_user_input():
@@ -104,7 +95,6 @@ def handle_user_input():
         response = handle_special_commands(user_input)
     else:
         response = call_openai_api(user_input)
-        # Stocker la question de l'utilisateur et la réponse du bot dans la base de données
         conn.execute('''
             INSERT INTO chat_history (user_message, bot_message) 
             VALUES (?, ?)
@@ -112,11 +102,9 @@ def handle_user_input():
         conn.commit()
     return jsonify({'response': response}), 200, {'Content-Type': 'application/json'}
 
-
 @app.route('/')
 def home():
     return render_template('chat.html')
-
 
 if __name__ == '__main__':
     app.run(debug=True)
