@@ -1,16 +1,14 @@
 from flask import Flask, request, jsonify, render_template
-import os
 import requests
 import sqlite3
 import openai
 import pyttsx3
-import json
 
-# Initialiser l'application Flask
+# Initialize the Flask app
 app = Flask(__name__)
 
 # Set OpenAI key
-openai.api_key = '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'
+openai.api_key = 'api'
 
 # Connect to SQLite database
 conn = sqlite3.connect('chat_history.db')
@@ -24,31 +22,88 @@ conn.execute('''
 ''')
 conn.commit()
 
-# Configurer le moteur OpenAI
-engine = "davinci-codex"
+# Configure the OpenAI engine for ChatGPT-3
+chatgpt3_engine = "gpt-3.5-turbo"
 
-# Configurer le synthétiseur vocal
+# Configure the speech synthesizer
 engine_speech = pyttsx3.init()
 
-DALLE_API_URL = 'https://api.openai.com/v1/images/dalle'
+# Configure DALL-E API URL
+dalle_api_url = 'https://api.openai.com/v1/images/generations'
 
-# Fonction pour appeler l'API OpenAI
+# Function to call the OpenAI API
 def call_openai_api(prompt):
-    response = openai.Completion.create(
-        engine=engine,
-        prompt=prompt,
-        max_tokens=50
+    response = openai.ChatCompletion.create(
+        model=chatgpt3_engine,
+        messages=[
+            {"role": "system", "content": "You are a helpful assistant."},
+            {"role": "user", "content": prompt}
+        ]
     )
-    return response.choices[0].text.strip()
+    return response['choices'][0]['message']['content']
 
-# Gestion des commandes spéciales
+# Function to synthesize the response into voice
+def speech_output(text):
+    engine_speech.say(text)
+    engine_speech.runAndWait()
+
+# Function to call the DALL-E API and generate an image
+def generate_image_with_dalle(prompt):
+    headers = {
+        'Authorization': f'Bearer {openai.api_key}',
+        'Content-Type': 'application/json'
+    }
+
+    data = {
+        'description': prompt,
+        'image': None
+    }
+
+    response = requests.post(dalle_api_url, headers=headers, json=data)
+    if response.status_code == 200:
+        image_url = response.json()['output']['url']
+        return image_url
+    else:
+        return None
+
+# Route to handle user input
+@app.route('/user-input', methods=['POST'])
+def handle_user_input():
+    # Connect to SQLite database
+    conn = sqlite3.connect('chat_history.db')
+
+    try:
+        user_input = request.json['user_input']
+        image_url = None  # Initialize image_url to None
+
+        if user_input.startswith('/'):
+            response, image_url = handle_special_commands(user_input)
+        else:
+            response = call_openai_api(user_input)
+            conn.execute('''
+                INSERT INTO chat_history (user_message, bot_message) 
+                VALUES (?, ?)
+            ''', (user_input, response))
+            conn.commit()
+    except Exception as e:
+        # Handle exceptions and return an error response
+        return jsonify({'error': str(e)}), 500
+
+    finally:
+        # Close the database connection
+        conn.close()
+
+    return jsonify({'response': response, 'image_url': image_url}), 200
+
+# Handle special commands
 def handle_special_commands(command):
+    image_url = None
     if command.startswith('/image'):
         prompt = command.replace('/image', '').strip()
         if prompt:
             image_url = generate_image_with_dalle(prompt)
             if image_url:
-                response = f'<img src="{image_url}" alt="Generated Image">'
+                response = 'Voici une image générée :'
             else:
                 response = 'Une erreur s\'est produite lors de la génération de l\'image.'
         else:
@@ -61,46 +116,7 @@ def handle_special_commands(command):
     else:
         response = call_openai_api(command)
 
-    return response
-
-# Fonction pour synthétiser la réponse en voix
-def speech_output(text):
-    engine_speech.say(text)
-    engine_speech.runAndWait()
-
-# Fonction pour générer une image avec DALL-E
-def generate_image_with_dalle(prompt):
-    headers = {
-        'Authorization': f'Bearer {openai.api_key}',
-        'Content-Type': 'application/json'
-    }
-
-    data = {
-        'prompt': prompt,
-        'num_images': 1
-    }
-
-    response = requests.post(DALLE_API_URL, headers=headers, json=data)
-    if response.status_code == 200:
-        image_url = response.json()['output']['images'][0]['resized']
-        return image_url
-    else:
-        return None
-
-# Route pour gérer les entrées de l'utilisateur
-@app.route('/user-input', methods=['POST','GET'])
-def handle_user_input():
-    user_input = request.json['user_input']
-    if user_input.startswith('/'):
-        response = handle_special_commands(user_input)
-    else:
-        response = call_openai_api(user_input)
-        conn.execute('''
-            INSERT INTO chat_history (user_message, bot_message) 
-            VALUES (?, ?)
-        ''', (user_input, response))
-        conn.commit()
-    return jsonify({'response': response}), 200, {'Content-Type': 'application/json'}
+    return response, image_url
 
 @app.route('/')
 def home():

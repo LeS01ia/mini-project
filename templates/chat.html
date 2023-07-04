@@ -1,82 +1,136 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>ChatGPT Interface</title>
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <title>MIAGEGPT Interface</title>
     <style>
+        /* Styles CSS pour l'interface utilisateur */
         body {
             font-family: Arial, sans-serif;
-            background-color: #e5e5e5;
-            padding: 0;
-            margin: 0;
+            background-color: #e8e8e8;
+            background-image: linear-gradient(45deg, #d9d9d9 25%, transparent 25%), linear-gradient(-45deg, #d9d9d9 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #d9d9d9 75%), linear-gradient(-45deg, transparent 75%, #d9d9d9 75%);
+            background-size: 20px 20px;
+            background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
         }
+
+        h1 {
+            color: #333;
+            text-align: center;
+            animation: gradientAnimation 5s linear infinite;
+        }
+
+        @keyframes gradientAnimation {
+            0% {
+                background-position: 0% 50%;
+            }
+            50% {
+                background-position: 100% 50%;
+            }
+            100% {
+                background-position: 0% 50%;
+            }
+        }
+
         #chatbox {
-            width: 600px;
-            height: 70vh;
-            margin: 50px auto;
+            height: 400px;
+            overflow-y: scroll;
+            border: 1px solid #4CAF50;
+            padding: 10px;
             background-color: #fff;
-            padding: 20px;
+        }
+
+        .user-message {
+            margin: 10px 0;
+            padding: 8px 12px;
+            color: #3498DB;
+            background-color: #F2F6F9;
             border-radius: 8px;
-            overflow-y: auto;
         }
+
+        .bot-message {
+            margin: 10px 0;
+            padding: 8px 12px;
+            color: #4CAF50;
+            background-color: #EDF7ED;
+            border-radius: 8px;
+        }
+
         #inputform {
-            width: 600px;
-            margin: 10px auto;
+            margin-top: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
+
         #userinput {
-            width: 100%;
-            box-sizing: border-box;
+            width: 70%;
             padding: 10px;
             font-size: 16px;
-            border: 2px solid #ccc;
-            border-radius: 4px;
         }
-        .user-message {
-            color: #000;
-            background-color: #e5e5e5;
-            padding: 10px;
-            margin-bottom: 10px;
-            border-radius: 4px;
-            align-self: flex-end;
-            order: 1;
+
+        #submitBtn {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin-left: 10px;
+            cursor: pointer;
         }
-        .bot-message {
-            color: #fff;
-            background-color: #007BFF;
-            padding: 10px;
-            margin-bottom: 10px;
-            border-radius: 4px;
-            align-self: flex-start;
-            order: 2;
+
+        #submitBtn:hover {
+            background-color: #45a049;
         }
-        .user-message::before {
-            content: "Vous :";
-            font-weight: bold;
-        }
-        .bot-message::before {
-            content: "Bot :";
-            font-weight: bold;
-        }
+
     </style>
 </head>
 <body>
-    <div id="chatbox"></div>
-    <form id="inputform">
-        <input type="text" id="userinput" autocomplete="off">
-    </form>
-    <script>
-        $("#inputform").on("submit", function(e) {
-            e.preventDefault();
+<h1>MIAGEGPT Interface</h1>
 
-            var userInput = $("#userinput").val();
-            $("#chatbox").append(`<p class="user-message">${userInput}</p>`);
-            $("#userinput").val("");
+<div id="chatbox"></div>
 
-            $.post("/user-input", { user_input: userInput }, function(data) {
-                $("#chatbox").append(`<p class="bot-message">${data.response}</p>`);
-                $("#chatbox").scrollTop($("#chatbox")[0].scrollHeight);
+<form id="inputform">
+    <input type="text" id="userinput" autocomplete="off" placeholder="Entrez votre message">
+    <button type="submit" id="submitBtn">Envoyer</button>
+</form>
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+<script>
+        $(document).ready(function() {
+            $("#inputform").on("submit", function(e) {
+                e.preventDefault();
+
+                var userInput = $("#userinput").val().trim();
+                if (userInput !== "") {
+                    $("#chatbox").append(`<p class="user-message">${userInput}</p>`);
+                    $("#userinput").val("");
+
+                       $.ajax({
+    url: "/user-input",
+    type: "POST",
+    contentType: "application/json",
+    data: JSON.stringify({ user_input: userInput }),
+    dataType: "json",
+    success: function(data) {
+        if (data.image_url) {
+            $("#chatbox").append(`<p class="bot-message">${data.response}</p><br><img src="${data.image_url}" alt="Generated Image">`);
+            $("#chatbox").append(`<p class="bot-message">${data.response}</p><br>URL de l'image générée : <a href="${data.image_url}" target="_blank">${data.image_url}</a>`);
+        } else {
+            $("#chatbox").append(`<p class="bot-message">${data.response}</p>`);
+        }
+        $("#chatbox").scrollTop($("#chatbox")[0].scrollHeight);
+    },
+    error: function(xhr, status, error) {
+        alert("Une erreur est survenue lors de la demande. Détails de l'erreur : " + error);
+    }
+});
+
+                }
             });
         });
-    </script>
+
+</script>
 </body>
 </html>
