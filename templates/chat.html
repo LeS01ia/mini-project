@@ -98,39 +98,41 @@
 
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
 <script>
-        $(document).ready(function() {
-            $("#inputform").on("submit", function(e) {
-                e.preventDefault();
+    $(document).ready(function() {
+        $("#inputform").on("submit", function(e) {
+            e.preventDefault();
 
-                var userInput = $("#userinput").val().trim();
-                if (userInput !== "") {
-                    $("#chatbox").append(`<p class="user-message">${userInput}</p>`);
-                    $("#userinput").val("");
+            var userInput = $("#userinput").val().trim();
+            if (userInput !== "") {
+                $("#chatbox").append(`<p class="user-message">${userInput}</p>`);
+                $("#userinput").val("");
 
-                       $.ajax({
-    url: "/user-input",
+                $.ajax({
+                  url: "/user-input",
     type: "POST",
     contentType: "application/json",
     data: JSON.stringify({ user_input: userInput }),
     dataType: "json",
     success: function(data) {
-        if (data.image_url) {
-            $("#chatbox").append(`<p class="bot-message">${data.response}</p><br><img src="${data.image_url}" alt="Generated Image">`);
-            $("#chatbox").append(`<p class="bot-message">${data.response}</p><br>URL de l'image générée : <a href="${data.image_url}" target="_blank">${data.image_url}</a>`);
-        } else {
-            $("#chatbox").append(`<p class="bot-message">${data.response}</p>`);
+    console.log(data);  // Ajout de cette ligne
+    var responseDiv = `<div class="response"><p class="bot-message">${data.response}</p>`;
+    if (data.image_urls && data.image_urls.length > 0) {
+        for (var i = 0; i < data.image_urls.length; i++) {
+            responseDiv += `<img src="${data.image_urls[i]}" alt="Generated Image">`;
         }
-        $("#chatbox").scrollTop($("#chatbox")[0].scrollHeight);
-    },
+    }
+    responseDiv += `</div>`;
+    $("#chatbox").append(responseDiv);
+    $("#chatbox").scrollTop($("#chatbox")[0].scrollHeight);
+},
+
     error: function(xhr, status, error) {
         alert("Une erreur est survenue lors de la demande. Détails de l'erreur : " + error);
     }
 });
-
-                }
-            });
+            }
         });
-
+    });
 </script>
 </body>
 </html>
